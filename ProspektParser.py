@@ -1,3 +1,4 @@
+from Flyer import Flyer
 import requests
 from bs4 import BeautifulSoup
 import json
@@ -12,33 +13,40 @@ class ProspektParser:
         response.raise_for_status()
         return response.text
 
+
     def parse_flyers(self, html):
         soup = BeautifulSoup(html, "html.parser")
         flyer_cards = soup.find_all("div", class_="brochure-thumb")
 
-        print(f"Nájdených {len(flyer_cards)} letákov na stránke.")  # ✅ DEBUG výstup
+        print(f"Nájdených {len(flyer_cards)} letákov na stránke.")
         i = 0
         for card in flyer_cards:
             try:
                 i += 1
                 title = card.find("p", class_="grid-item-content").text.strip()
-                print({title})
+                #print({title})
                 if i < 5:
                     thumbnail = card.find("img")["src"]
-                    print({thumbnail})
+                    #print({thumbnail})
                 else:
                     thumbnail = card.find("img")["data-src"]
-                    print({thumbnail})
+                    #print({thumbnail})
 
-                #shop_name = card.find("img")["alt"].text.strip()
+                shop_name = card.find("div", class_="grid-logo").find("img")["alt"]
+                shop_name = " ".join(shop_name.split()[1:])
+                #print(shop_name)
 
-                #date_range = card.find("small", class_="hidden-sm").text.strip()
-                #valid_from, valid_to = self.parse_dates(date_range)
+                date_range = card.find("small", class_="hidden-sm").text.strip()
+                valid_from, valid_to = self.parse_dates(date_range)
+                # print("letak", {i})
+                # print(valid_from)
+                # print(valid_to)
 
-                #flyer = Flyer(title, thumbnail, shop_name, valid_from, valid_to)
-                #self.flyers.append(flyer)
+
+                flyer = Flyer(title, thumbnail, shop_name, valid_from, valid_to)
+                self.flyers.append(flyer)
             except AttributeError:
-                continue  
+                continue
 
     @staticmethod
     def parse_dates(date_range):
@@ -48,7 +56,7 @@ class ProspektParser:
             valid_to = datetime.strptime(date_parts[1], "%d.%m.%Y").strftime("%Y-%m-%d")
             return valid_from, valid_to
         except (IndexError, ValueError):
-            return "Unknown", "Unknown"
+            return date_range, "Unknown"
 
     def save_to_json(self, filename="flyers.json"):
         with open(filename, "w", encoding="utf-8") as f:
